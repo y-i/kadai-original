@@ -10,7 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170421042317) do
+ActiveRecord::Schema.define(version: 20170424065601) do
+
+  create_table "rooms", force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string   "number"
+    t.string   "comment"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "users", force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.string   "name"
@@ -19,6 +26,12 @@ ActiveRecord::Schema.define(version: 20170421042317) do
     t.string   "password_digest"
     t.datetime "created_at",      null: false
     t.datetime "updated_at",      null: false
+    t.integer  "owner_room_id"
+    t.integer  "guest_room_id"
+    t.index ["guest_room_id"], name: "index_users_on_guest_room_id", using: :btree
+    t.index ["owner_room_id"], name: "index_users_on_owner_room_id", using: :btree
   end
 
+  add_foreign_key "users", "rooms", column: "guest_room_id"
+  add_foreign_key "users", "rooms", column: "owner_room_id"
 end

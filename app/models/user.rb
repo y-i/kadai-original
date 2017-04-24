@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  belongs_to :rooms
+
   before_save { self.email.downcase! }
   validates :name, presence: true, length: { maximum: 50 }
   validates :nickname, length: { maximum: 50 }

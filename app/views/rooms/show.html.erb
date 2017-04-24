@@ -1,0 +1,111 @@
+<div class="row">
+  <div class="col-sm-offset-1 col-sm-3" style="font-size: large; font-weight: bold;">
+    Room #<%= @room.id %>
+  </div>
+  <div class="well col-xs-12 col-sm-offset-1 col-sm-10">
+    <% @room.number ||= -1 %>
+    <%= @room.id %>&nbsp;&gt;&nbsp;<%= @room.comment %>&nbsp;&gt;&nbsp;number:&nbsp;<%= @room.number %><br />
+    Owner: <%= @owner ? @owner.name : "-" %>, Guest: <%= @guest ? @guest.name : "-" %>
+  </div>
+  <div class="well col-xs-12 col-sm-offset-1 col-sm-10">
+    <form class="form-horizontal">
+      <fieldset>
+        <div class="form-group label-floating">
+          <div class="col-md-12 input-group">
+              <label class="control-label" for="chatin">message</label>
+              <input type="text" class="form-control" id="chatin" />
+              <span class="input-group-btn">
+                <button type="button" class="btn btn-default" id="send">Send</button>
+              </span>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+  </div>
+
+  <div class="well col-xs-12 col-sm-offset-1 col-sm-10" id="chat"></div>
+</div>
+
+<script src="https://skyway.io/dist/0.3/peer.js"></script>
+<% if current_user.owner_room_id == @room.id %>
+  <script>
+    function getCsrfToken() {
+      for (const elem of document.getElementsByTagName('meta')) {
+        if (elem.name === 'csrf-token') {
+          return elem.content;
+        }
+      }
+    }
+    window.addEventListener('load', () => {
+      const APIKEY = 'c6d0d686-69dc-42f5-bdec-795e54e5713d'
+      var peer = new Peer({key: APIKEY})
+      peer.on('open', function(id) {
+        console.log('My peer ID is: ' + id);
+        fetch('http://techacademy-iyusuke.c9users.io:8080/api/room/<%= @room.id %>', {
+          mode: 'cors',
+          method: 'POST',
+          headers: {
+            'X-CSRF-Token': getCsrfToken()
+          },
+          body: JSON.stringify({
+            'authenticity_token': getCsrfToken(),
+            /* 'id': <%= @room.id %>, */
+            'skyway_id': id
+          }),
+          credentials: 'include'
+        }).then(res => {
+          console.log(res.url, res.type, res.status);
+
+          if(res.headers.get('content-type').indexOf('application/json') != -1) {
+            res.json().then(json => console.log(json));
+          } else {
+          // res.arrayBuffer();
+          // res.blob();
+          console.log(res.headers.get('content-type'))
+            res.text().then(text => console.log(text));
+          }
+        }).catch(err => console.error(err));
+
+        peer.on('connection', (conn) => {
+          conn.on('open', () => {
+            conn.on('data', function(data) {
+              console.log('Received', data);
+              document.getElementById('chat').innerHTML += `${conn.id}: ${data}<br />`
+              // conn.send(`Ack: ${data}`);
+            });
+          });
+          document.getElementById('send').addEventListener('click', () => {
+            let data = document.getElementById('chatin').value
+            conn.send(data)
+            document.getElementById('chat').innerHTML += `${id}: ${data}<br />`
+            return false
+          })
+        });
+      });
+    });
+  </script>
+<% elsif @room.number != nil %>
+  <script>
+    window.addEventListener('load', () => {
+      const APIKEY = 'c6d0d686-69dc-42f5-bdec-795e54e5713d'
+      var peer = new Peer({key: APIKEY})
+      peer.on('open', function(id) {
+        console.log('My peer ID is: ' + id);
+        var conn = peer.connect("<%= @room.number %>")
+        conn.on('open', () => {
+          conn.on('data', function(data) {
+            console.log('Received', data);
+            document.getElementById('chat').innerHTML += `${id}: ${data}<br />`
+          });
+          conn.send('Hello!');
+          document.getElementById('send').addEventListener('click', () => {
+            let data = document.getElementById('chatin').value
+            conn.send(data)
+            document.getElementById('chat').innerHTML += `${conn.id}: ${data}<br />`
+            return false
+          })
+        });
+      });
+    });
+  </script>
+<% end %>
